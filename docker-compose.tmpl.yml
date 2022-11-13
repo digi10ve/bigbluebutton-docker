@@ -74,7 +74,8 @@ services:
     networks:
       bbb-net:
         ipv4_address: 10.7.7.2
-
+    deploy:
+      mode: global
 
 {{ range $i := loop 0 (atoi .Env.NUMBER_OF_BACKEND_NODEJS_PROCESSES) }}
   html5-backend-{{ add $i 1 }}:
@@ -86,6 +87,10 @@ services:
     networks:
       bbb-net:
         ipv4_address: 10.7.7.{{ add 100 $i }}
+    ports:
+      - {{ add 4000 $i }}:{{ add 4000 $i }}      
+    deploy:
+      mode: global      
 {{end}}
 
 {{ range $i := loop 0 (atoi .Env.NUMBER_OF_FRONTEND_NODEJS_PROCESSES) }}
@@ -98,11 +103,15 @@ services:
     networks:
       bbb-net:
         ipv4_address: 10.7.7.{{ add 200 $i }}
+    ports:
+      - {{ add 4000 $i }}:{{ add 4000 $i }}      
+    deploy:
+      mode: global      
 {{end}}
 
 
   freeswitch:
-    container_name: bbb-freeswitch
+    container_name: bbb-stack_bbb-freeswitch
     build: 
       context: mod/freeswitch
       args:
@@ -129,7 +138,10 @@ services:
       - ./conf/sip_profiles:/etc/freeswitch/sip_profiles/external
       - ./conf/dialplan_public:/etc/freeswitch/dialplan/public_docker
       - vol-freeswitch:/var/freeswitch/meetings
-    network_mode: host
+    networks:
+      - bbb-net
+    deploy:
+      mode: global
 
   nginx:
     build:
@@ -146,13 +158,26 @@ services:
       - bigbluebutton:/var/bigbluebutton
       - html5-static:/html5-static:ro
       - ${DEFAULT_PRESENTATION:-/dev/null}:/www/default.pdf
-    network_mode: host
+    networks:
+      - bbb-net
+    ports:
+      # external
+      - 80:80 
+      - 443:443
+      # internal
+      - 8090:8090 # bbb-web
+      - 7443:7443 # freeswitch
+      - 3000:3000 # html5
+      - 3008:3008 # webrtc-sfu
+      - 9001:9001 # etherpad  
     extra_hosts:
       - "host.docker.internal:10.7.7.1"
       - "bbb-web:10.7.7.2"
       - "etherpad:10.7.7.4"
       - "webrtc-sfu:10.7.7.1"
       - "html5:10.7.7.11"
+    deploy:
+      mode: global
 
   etherpad:
     build: mod/etherpad
@@ -165,6 +190,8 @@ services:
     networks:
       bbb-net:
         ipv4_address: 10.7.7.4
+    deploy:
+      mode: global
 
   bbb-pads:
     build: mod/bbb-pads
@@ -178,6 +205,10 @@ services:
     networks:
       bbb-net:
         ipv4_address: 10.7.7.18
+    ports:
+      - 9002:9002    
+    deploy:
+      mode: global
 
   redis:
     image: redis:7.0-alpine
@@ -190,6 +221,10 @@ services:
     networks:
       bbb-net:
         ipv4_address: 10.7.7.5
+    ports:
+      - 6379:6379    
+    deploy:
+      mode: global
 
   mongodb:
     container_name: bbb-mongodb
@@ -198,23 +233,33 @@ services:
     volumes:
       - ./mod/mongo/mongod.conf:/etc/mongod.conf
       - ./mod/mongo/init-replica.sh:/docker-entrypoint-initdb.d/init-replica.sh
-    tmpfs:
-      - /data/configdb
-      - /data/db
+      - type: tmpfs
+        target: /data/configdb
+      - type: tmpfs
+        target: /data/db
     command: mongod --config /etc/mongod.conf --oplogSize 8 --replSet rs0 --noauth
     healthcheck:
       test: bash -c "if mongo --eval 'quit(db.runCommand({ ping':' 1 }).ok ? 0 ':' 2)'; then exit 0; fi; exit 1;"
     networks:
       bbb-net:
         ipv4_address: 10.7.7.6
+    ports:
+      - target: 27017
+        published: 27017
+        mode: host    
+    deploy:
+      mode: global
 
   #  TODO: remove as soon as not required anymore by webrtc-sfu
   kurento:
     image: kurento/kurento-media-server:6.18
     restart: unless-stopped
-    network_mode: host
     volumes:
       - vol-kurento:/var/kurento
+    networks:
+      - bbb-net
+    deploy:
+      mode: global
 
   webrtc-sfu:
     build: 
@@ -243,9 +288,12 @@ services:
       MS_RTP_LISTEN_IP: '{"ip":"0.0.0.0", "announcedIp":"${EXTERNAL_IPv4}"}'
     volumes:
       - vol-mediasoup:/var/mediasoup
-    tmpfs:
-      - /var/log/bbb-webrtc-sfu
-    network_mode: host
+      - type: tmpfs
+        target: /var/log/bbb-webrtc-sfu
+    networks:
+      - bbb-net
+    deploy:
+      mode: global
 
   fsesl-akka:
     build: 
@@ -264,6 +312,8 @@ services:
     networks:
       bbb-net:
         ipv4_address: 10.7.7.14
+    deploy:
+      mode: global
 
   apps-akka:
     build: 
@@ -284,6 +334,8 @@ services:
     networks:
       bbb-net:
         ipv4_address: 10.7.7.15
+    deploy:
+      mode: global
 
   jodconverter:
     build: mod/jodconverter
@@ -291,12 +343,14 @@ services:
     security_opt:
       - 'no-new-privileges:true'
     restart: unless-stopped
-    tmpfs:
-      - /tmp
+    volumes:
+      - type: tmpfs
+        target: /tmp
     deploy:
       resources:
         limits:
           memory: 512M
+      mode: global
     networks:
       bbb-net:
         ipv4_address: 10.7.7.20
@@ -311,8 +365,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - bigbluebutton:/var/bigbluebutton
       - vol-mediasoup:/var/mediasoup
-    tmpfs:
-      - /var/log/bigbluebutton
+      - type: tmpfs
+        target:  /var/log/bigbluebutton
     environment:
       ENABLE_RECORDING: ${ENABLE_RECORDING}
       REMOVE_OLD_RECORDING: ${REMOVE_OLD_RECORDING}
@@ -320,6 +374,8 @@ services:
     networks:
       bbb-net:
         ipv4_address: 10.7.7.12
+    deploy:
+      mode: global
 
 {{ if isTrue .Env.ENABLE_RECORDING }}
   # recordings
@@ -341,12 +397,15 @@ services:
       - vol-freeswitch:/var/freeswitch/meetings
       - vol-mediasoup:/var/mediasoup
       - vol-kurento:/var/kurento
-    tmpfs:
-      - /var/log/bigbluebutton
-      - /tmp
+      - type: tmpfs
+        target: /var/log/bigbluebutton
+      - type: tmpfs
+      - target:  /tmp
     networks:
       bbb-net:
         ipv4_address: 10.7.7.16
+    deploy:
+      mode: global
 {{end}}
 
 {{ if isTrue .Env.ENABLE_WEBHOOKS }}
@@ -363,6 +422,8 @@ services:
     networks:
       bbb-net:
         ipv4_address: 10.7.7.17
+    deploy:
+      mode: global
 {{end}}
 
 {{ if isTrue .Env.ENABLE_HTTPS_PROXY }}
@@ -383,7 +444,10 @@ services:
       {{else}}
       ALLOWED_DOMAINS: ${DOMAIN}
       {{end}}
-    network_mode: host
+    networks:
+      - bbb-net
+    deploy:
+      mode: global
 {{end}}
 
 {{ if isTrue .Env.ENABLE_COTURN }}
@@ -407,7 +471,10 @@ services:
     environment:
       ENABLE_HTTPS_PROXY:
     user: root
-    network_mode: host
+    networks:
+      - bbb-net
+    deploy:
+      mode: global
 {{end}}
 
 
@@ -430,8 +497,12 @@ services:
       {{end}}
       BIGBLUEBUTTON_SECRET: ${SHARED_SECRET}
       SECRET_KEY_BASE: ${RAILS_SECRET}
+    networks:
+      - bbb-net
     ports:
-      - 10.7.7.1:5000:80
+      - 5000:80
+    deploy:
+      mode: global
   postgres:
     image: postgres:12-alpine
     restart: unless-stopped
@@ -446,6 +517,10 @@ services:
       retries: 5
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
+    networks:
+      - bbb-net
+    deploy:
+      mode: global
 {{end}}
 
 {{ if isTrue .Env.ENABLE_PROMETHEUS_EXPORTER }}
@@ -464,6 +539,8 @@ services:
     volumes:
       - bigbluebutton:/var/bigbluebutton:ro
     {{end}}
+    deploy:
+      mode: global
 {{end}}
 
 
@@ -479,7 +556,8 @@ volumes:
 
 networks:
   bbb-net:
+    driver: overlay
+    attachable: true
     ipam:
-      driver: default
       config:
         - subnet: "10.7.7.0/24"
