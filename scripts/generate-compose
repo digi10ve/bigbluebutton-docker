@@ -65,4 +65,4 @@ docker run  \
     -e NUMBER_OF_BACKEND_NODEJS_PROCESSES=${NUMBER_OF_BACKEND_NODEJS_PROCESSES:-1} \
     -e NUMBER_OF_FRONTEND_NODEJS_PROCESSES=${NUMBER_OF_FRONTEND_NODEJS_PROCESSES:-1} \
     jwilder/dockerize -template /docker-compose.tmpl.yml \
-    > docker-compose.yml
+    > docker-compose-build.yml
