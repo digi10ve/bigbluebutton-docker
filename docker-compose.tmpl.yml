@@ -128,6 +128,7 @@ services:
     environment:
       DOMAIN: ${DOMAIN}
       EXTERNAL_IPv4: ${EXTERNAL_IPv4}
+      ANNOUNCED_IPv4: ${ANNOUNCED_IPv4}
       EXTERNAL_IPv6: ${EXTERNAL_IPv6:-::1}
       SIP_IP_ALLOWLIST: ${SIP_IP_ALLOWLIST:-}
       DISABLE_SOUND_MUTED: ${DISABLE_SOUND_MUTED:-false}
@@ -281,11 +282,11 @@ services:
       # TODO: add mediasoup IPv6
       # TODO: can listen to 0.0.0.0 for nat support? https://github.com/versatica/mediasoup/issues/487
     {{ if .Env.EXTERNAL_IPv6 }}
-      MS_WEBRTC_LISTEN_IPS: '[{"ip":"{{ .Env.EXTERNAL_IPv6 }}", "announcedIp":"{{ .Env.EXTERNAL_IPv6 }}"}, {"ip":"${EXTERNAL_IPv4}", "announcedIp":"${EXTERNAL_IPv4}"}]'
+      MS_WEBRTC_LISTEN_IPS: '[{"ip":"{{ .Env.EXTERNAL_IPv6 }}", "announcedIp":"{{ .Env.EXTERNAL_IPv6 }}"}, {"ip":"${INTERNAL_IPv4}", "announcedIp":"${ANNOUNCED_IPv4}"}]'
     {{else}}
-      MS_WEBRTC_LISTEN_IPS: '[{"ip":"${EXTERNAL_IPv4}", "announcedIp":"${EXTERNAL_IPv4}"}]'
+      MS_WEBRTC_LISTEN_IPS: '[{"ip":"${INTERNAL_IPv4}", "announcedIp":"${ANNOUNCED_IPv4}"}]'
     {{end}}
-      MS_RTP_LISTEN_IP: '{"ip":"0.0.0.0", "announcedIp":"${EXTERNAL_IPv4}"}'
+      MS_RTP_LISTEN_IP: '{"ip":"0.0.0.0", "announcedIp":"${ANNOUNCED_IPv4}"}'
     volumes:
       - vol-mediasoup:/var/mediasoup
       - type: tmpfs
