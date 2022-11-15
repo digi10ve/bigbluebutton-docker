@@ -400,7 +400,7 @@ services:
       - type: tmpfs
         target: /var/log/bigbluebutton
       - type: tmpfs
-      - target:  /tmp
+        target:  /tmp
     networks:
       bbb-net:
         ipv4_address: 10.7.7.16
