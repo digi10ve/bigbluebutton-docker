@@ -197,8 +197,8 @@ sed -i "s/FSESL_PASSWORD=.*/FSESL_PASSWORD=$RANDOM_4/" .env
 sed -i "s/POSTGRESQL_SECRET=.*/POSTGRESQL_SECRET=$RANDOM_5/" .env
 
 ./scripts/generate-compose
-cp docker-compose-build.yml docker-compose.yml
-sed -i "s/alangecker/localhost:5000/" docker-compose.yml
+cp docker-compose.yml docker-stack.yml
+sed -i "s/alangecker/localhost:5000/" docker-stack.yml
 
 echo "--------------------------------------------------"
 echo "configuration file .env got successfully created!"
