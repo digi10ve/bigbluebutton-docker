@@ -28,11 +28,11 @@ Version: 2.5.8 | [Changelog](CHANGELOG.md) | [Issues](https://github.com/bigblue
     4. Ensure docker-compose works and that you use a version ≥ 1.28 : `$ docker-compose --version`
 2. Clone this repository
    ```sh
-   $ git clone --recurse-submodules https://github.com/bigbluebutton/docker.git bbb-docker
+   $ git clone --recurse-submodules https://github.com/digi10ve/bigbluebutton-docker.git bbb-docker
    $ cd bbb-docker
 
-   # use the more stable main branch (sometimes older)
-   $ git checkout main 
+   # use the swarm branch for testing
+   $ git checkout swarm-0.1
    ```
 3. Run setup:
    ```bash
@@ -44,11 +44,20 @@ Version: 2.5.8 | [Changelog](CHANGELOG.md) | [Issues](https://github.com/bigblue
    # always recreate the docker-compose.yml file after making any changes
    $ ./scripts/generate-compose
    ```
-5. Start containers:
-    ```bash
-    $ docker-compose up -d
-    ```
-6. If you use greenlight, you can create an admin account with:
+5. Build local images (Stack doesn't support 'build'):
+   ```bash
+   $ docker-compose build
+   ```
+6. Deploy containers:
+   ```bash
+   # Using local images after building 
+   $ sed -i "s/alangecker/localhost:5000" docker-compose.yml
+
+   # deploy containers with a method to get variables in .env
+   $ docker stack deploy <(docker-compose config) bbb-stack
+   ``` 
+7. (currently not working)
+   If you use greenlight, you can create an admin account with:
     ```bash
     $ docker-compose exec greenlight bundle exec rake admin:create
     ```
