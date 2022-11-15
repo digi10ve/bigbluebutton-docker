@@ -51,7 +51,7 @@ Version: 2.5.8 | [Changelog](CHANGELOG.md) | [Issues](https://github.com/bigblue
 6. Deploy containers:
    ```bash
    # Using local images after building 
-   $ sed -i "s/alangecker/localhost:5000" docker-compose.yml
+   $ sed -i "s/alangecker/localhost:5000/g" docker-compose.yml
 
    # Deploy containers with a method to get variables in .env
    $ docker stack deploy -c <(docker-compose config) bbb-stack
