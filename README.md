@@ -53,8 +53,8 @@ Version: 2.5.8 | [Changelog](CHANGELOG.md) | [Issues](https://github.com/bigblue
    # Using local images after building 
    $ sed -i "s/alangecker/localhost:5000" docker-compose.yml
 
-   # deploy containers with a method to get variables in .env
-   $ docker stack deploy <(docker-compose config) bbb-stack
+   # Deploy containers with a method to get variables in .env
+   $ docker stack deploy -c <(docker-compose config) bbb-stack
    ``` 
 7. (currently not working)
    If you use greenlight, you can create an admin account with:
