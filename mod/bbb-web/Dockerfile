@@ -25,6 +25,10 @@ RUN cd /bbb-common-web \
 RUN svn checkout https://github.com/bigbluebutton/bigbluebutton/tags/$TAG_BBB_WEB/bigbluebutton-web /bbb-web \
     && rm -rf /bbb-web/.svn
 
+# replace jcenter with mavenCenter 
+RUN sed -i 's/jcenter/mavenCentral/g' /bbb-web/build.gradle && \
+    sed -i 's/jcenter/mavenCentral/g' /bbb-web/pres-checker/build.gradle
+
 # compile bbb-web
 RUN cd /bbb-web && grails assemble
 

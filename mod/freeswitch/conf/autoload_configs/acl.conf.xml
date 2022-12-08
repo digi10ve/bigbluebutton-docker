@@ -30,8 +30,9 @@
     <list name="deny_private_v6" default="allow">
       <node type="deny" cidr="0.0.0.0/0"/>
       <node type="deny" cidr="fe80::/10"/>
-      <node type="deny" cidr="fc00::/7"/>
+      <node type="deny" cidr="fc00::/7"/>	      
     </list>
+
     <!--
         This will traverse the directory adding all users
         with the cidr= tag to this ACL, when this ACL matches
