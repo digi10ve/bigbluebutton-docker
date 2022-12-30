@@ -3,7 +3,7 @@
 # don't edit this directly.
 {{/* -------- */}}
 
-version: '3.6'
+version: '3.7'
 
 # html5 templates
 x-html5-backend: &html5backend
@@ -12,7 +12,7 @@ x-html5-backend: &html5backend
     args:
       BBB_BUILD_TAG: {{ .Env.BBB_BUILD_TAG }}
       TAG_HTML5: {{ .Env.TAG_HTML5 }}
-  image: alangecker/bbb-docker-html5:{{ .Env.TAG_HTML5 }}
+  image: localhost:5000/bbb-docker-html5:{{ .Env.TAG_HTML5 }}
   restart: unless-stopped
   depends_on:
     - redis
@@ -48,13 +48,13 @@ services:
         BBB_BUILD_TAG: {{ .Env.BBB_BUILD_TAG }}
         TAG_COMMON_MESSAGE: {{ .Env.TAG_COMMON_MESSAGE }}
         TAG_BBB_WEB: {{ .Env.TAG_BBB_WEB }}
-    image: alangecker/bbb-docker-web:{{ .Env.TAG_BBB_WEB }}
+    image: localhost:5000/bbb-docker-web:{{ .Env.TAG_BBB_WEB }}
     restart: unless-stopped
     depends_on:
         - redis
         - etherpad
     healthcheck:
-      test: wget --no-proxy --no-verbose --tries=1 --spider http://10.7.7.2:8090/bigbluebutton/api || exit 1
+      test: wget --no-proxy --no-verbose --tries=1 --spider http://bbb-web:8090/bigbluebutton/api || exit 1
       start_period: 2m
     environment:
       DEV_MODE: ${DEV_MODE:-}
@@ -74,8 +74,14 @@ services:
     networks:
       bbb-net:
         ipv4_address: 10.7.7.2
+    ports:
+      # bbb-web
+      - target: 8090
+        published: 8090
+        mode: host
     deploy:
       mode: global
+      endpoint_mode: dnsrr
 
 {{ range $i := loop 0 (atoi .Env.NUMBER_OF_BACKEND_NODEJS_PROCESSES) }}
   html5-backend-{{ add $i 1 }}:
@@ -87,10 +93,9 @@ services:
     networks:
       bbb-net:
         ipv4_address: 10.7.7.{{ add 100 $i }}
-    ports:
-      - {{ add 4000 $i }}:{{ add 4000 $i }}      
     deploy:
-      mode: global      
+      mode: global
+      endpoint_mode: dnsrr
 {{end}}
 
 {{ range $i := loop 0 (atoi .Env.NUMBER_OF_FRONTEND_NODEJS_PROCESSES) }}
@@ -103,10 +108,9 @@ services:
     networks:
       bbb-net:
         ipv4_address: 10.7.7.{{ add 200 $i }}
-    ports:
-      - {{ add 4100 $i }}:{{ add 4100 $i }}      
     deploy:
-      mode: global      
+      mode: global
+      endpoint_mode: dnsrr
 {{end}}
 
 
@@ -116,7 +120,7 @@ services:
       context: mod/freeswitch
       args:
         TAG_FS_CONFIG: {{ .Env.TAG_FS_CONFIG }}
-    image: alangecker/bbb-docker-freeswitch:{{ .Env.TAG_FS_CONFIG }}
+    image: localhost:5000/bbb-docker-freeswitch:{{ .Env.TAG_FS_CONFIG }}
     restart: unless-stopped
     cap_add:
       - IPC_LOCK
@@ -141,15 +145,23 @@ services:
       - vol-freeswitch:/var/freeswitch/meetings
     networks:
       - bbb-net
+    ports:
+      - target: 5060
+        published: 5060
+        mode: host
+      # freeswitch
+      - target: 7443
+        published: 7443
+        mode: host
     deploy:
       mode: global
-
+      endpoint_mode: dnsrr
   nginx:
     build:
       context: mod/nginx
       args:
         TAG_LEARNING_DASHBOARD: {{ .Env.TAG_LEARNING_DASHBOARD }}
-    image: alangecker/bbb-docker-nginx:1.21-{{ .Env.TAG_PLAYBACK }}-{{ .Env.TAG_LEARNING_DASHBOARD }}
+    image: localhost:5000/bbb-docker-nginx:1.21-{{ .Env.TAG_PLAYBACK }}-{{ .Env.TAG_LEARNING_DASHBOARD }}
     restart: unless-stopped
     depends_on:
       - etherpad
@@ -162,27 +174,20 @@ services:
     networks:
       - bbb-net
     ports:
-      # external
-      - 80:80 
-      - 443:443
-      # internal
-      - 8090:8090 # bbb-web
-      - 7443:7443 # freeswitch
-      - 3000:3000 # html5
-      - 3008:3008 # webrtc-sfu
-      - 9001:9001 # etherpad  
-    extra_hosts:
-      - "host.docker.internal:10.7.7.1"
-      - "bbb-web:10.7.7.2"
-      - "etherpad:10.7.7.4"
-      - "webrtc-sfu:10.7.7.1"
-      - "html5:10.7.7.11"
+      - mode: host
+    #extra_hosts:
+    #  - "host.docker.internal:10.7.7.1"
+    #  - "bbb-web:10.7.7.2"
+    #  - "etherpad:10.7.7.4"
+    #  - "webrtc-sfu:10.7.7.1"
+    #  - "html5:10.7.7.11"
     deploy:
       mode: global
+      endpoint_mode: dnsrr
 
   etherpad:
     build: mod/etherpad
-    image: alangecker/bbb-docker-etherpad:1.8.18-3
+    image: localhost:5000/bbb-docker-etherpad:1.8.18-3
     restart: unless-stopped
     depends_on:
       - redis
@@ -191,12 +196,17 @@ services:
     networks:
       bbb-net:
         ipv4_address: 10.7.7.4
+    ports:
+      - target: 9001
+        published: 9001
+        mode: host    
     deploy:
       mode: global
+      endpoint_mode: dnsrr
 
   bbb-pads:
     build: mod/bbb-pads
-    image: alangecker/bbb-docker-pads:{{ .Env.TAG_PADS }}
+    image: localhost:5000/bbb-docker-pads:{{ .Env.TAG_PADS }}
     restart: unless-stopped
     depends_on:
       - redis
@@ -210,6 +220,7 @@ services:
       - 9002:9002    
     deploy:
       mode: global
+      endpoint_mode: dnsrr
 
   redis:
     image: redis:7.0-alpine
@@ -223,9 +234,12 @@ services:
       bbb-net:
         ipv4_address: 10.7.7.5
     ports:
-      - 6379:6379    
+      - target: 6379
+        published: 6379
+        mode: host
     deploy:
       mode: global
+      endpoint_mode: dnsrr
 
   mongodb:
     container_name: bbb-mongodb
@@ -250,6 +264,7 @@ services:
         mode: host    
     deploy:
       mode: global
+      endpoint_mode: dnsrr
 
   #  TODO: remove as soon as not required anymore by webrtc-sfu
   kurento:
@@ -259,23 +274,28 @@ services:
       - vol-kurento:/var/kurento
     networks:
       - bbb-net
+    ports:
+      - target: 8888
+        published: 8888
+        mode: host    
     deploy:
       mode: global
+      endpoint_mode: dnsrr
 
   webrtc-sfu:
     build: 
       context: mod/webrtc-sfu
       args:
         BBB_BUILD_TAG: {{ .Env.BBB_BUILD_TAG }}
-    image: alangecker/bbb-docker-webrtc-sfu:{{ .Env.TAG_WEBRTC_SFU }}
+    image: localhost:5000/bbb-docker-webrtc-sfu:{{ .Env.TAG_WEBRTC_SFU }}
     restart: unless-stopped
     depends_on:
       - redis
       - freeswitch
     environment:
       CLIENT_HOST: 10.7.7.1
-      REDIS_HOST: 10.7.7.5
-      FREESWITCH_IP: 10.7.7.1
+      REDIS_HOST: redis
+      FREESWITCH_IP: freeswitch
       FREESWITCH_SIP_IP: ${EXTERNAL_IPv4}
       ESL_IP: 10.7.7.1
       ESL_PASSWORD: ${FSESL_PASSWORD:-ClueCon}
@@ -293,8 +313,11 @@ services:
         target: /var/log/bbb-webrtc-sfu
     networks:
       - bbb-net
+    ports:
+      - mode: host
     deploy:
       mode: global
+      endpoint_mode: dnsrr
 
   fsesl-akka:
     build: 
@@ -303,7 +326,7 @@ services:
         BBB_BUILD_TAG: {{ .Env.BBB_BUILD_TAG }}
         TAG_COMMON_MESSAGE: {{ .Env.TAG_COMMON_MESSAGE }}
         TAG_FSESL_AKKA: {{ .Env.TAG_FSESL_AKKA }}
-    image: alangecker/bbb-docker-fsesl-akka:{{ .Env.TAG_FSESL_AKKA }}
+    image: localhost:5000/bbb-docker-fsesl-akka:{{ .Env.TAG_FSESL_AKKA }}
     restart: unless-stopped
     depends_on:
       - redis
@@ -315,6 +338,7 @@ services:
         ipv4_address: 10.7.7.14
     deploy:
       mode: global
+      endpoint_mode: dnsrr
 
   apps-akka:
     build: 
@@ -323,7 +347,7 @@ services:
         BBB_BUILD_TAG: {{ .Env.BBB_BUILD_TAG }}
         TAG_COMMON_MESSAGE: {{ .Env.TAG_COMMON_MESSAGE }}
         TAG_APPS_AKKA: {{ .Env.TAG_APPS_AKKA }}
-    image: alangecker/bbb-docker-apps-akka:{{ .Env.TAG_APPS_AKKA }}
+    image: localhost:5000/bbb-docker-apps-akka:{{ .Env.TAG_APPS_AKKA }}
     restart: unless-stopped
     depends_on:
       - redis
@@ -337,10 +361,11 @@ services:
         ipv4_address: 10.7.7.15
     deploy:
       mode: global
+      endpoint_mode: dnsrr
 
   jodconverter:
     build: mod/jodconverter
-    image: alangecker/bbb-docker-jodconverter:latest
+    image: localhost:5000/bbb-docker-jodconverter:latest
     security_opt:
       - 'no-new-privileges:true'
     restart: unless-stopped
@@ -352,13 +377,14 @@ services:
         limits:
           memory: 512M
       mode: global
+      endpoint_mode: dnsrr
     networks:
       bbb-net:
         ipv4_address: 10.7.7.20
 
   periodic:
     build: mod/periodic
-    image: alangecker/bbb-docker-periodic:v2.5.0-rc.1
+    image: localhost:5000/bbb-docker-periodic:v2.5.0-rc.1
     restart: unless-stopped
     depends_on:
       - mongodb
@@ -377,6 +403,7 @@ services:
         ipv4_address: 10.7.7.12
     deploy:
       mode: global
+      endpoint_mode: dnsrr
 
 {{ if isTrue .Env.ENABLE_RECORDING }}
   # recordings
@@ -386,7 +413,7 @@ services:
       args:
         BBB_BUILD_TAG: {{ .Env.BBB_BUILD_TAG }}
         TAG_RECORDINGS: {{ .Env.TAG_RECORDINGS }}
-    image: alangecker/bbb-docker-recordings:{{ .Env.TAG_RECORDINGS }}
+    image: localhost:5000/bbb-docker-recordings:{{ .Env.TAG_RECORDINGS }}
     restart: unless-stopped
     depends_on:
       - redis
@@ -407,13 +434,14 @@ services:
         ipv4_address: 10.7.7.16
     deploy:
       mode: global
+      endpoint_mode: dnsrr
 {{end}}
 
 {{ if isTrue .Env.ENABLE_WEBHOOKS }}
   # webhooks
   webhooks:
     build: mod/webhooks
-    image: alangecker/bbb-docker-webhooks:{{ .Env.TAG_WEBHOOKS }}
+    image: localhost:5000/bbb-docker-webhooks:{{ .Env.TAG_WEBHOOKS }}
     restart: unless-stopped
     environment:
       DOMAIN: ${DOMAIN}
@@ -425,6 +453,7 @@ services:
         ipv4_address: 10.7.7.17
     deploy:
       mode: global
+      endpoint_mode: dnsrr
 {{end}}
 
 {{ if isTrue .Env.ENABLE_HTTPS_PROXY }}
@@ -439,7 +468,7 @@ services:
     {{else}}
       - ./mod/https/site-ipv4only.conf:/etc/nginx/conf.d/bbb-docker.conf
     {{end}}
-    environment:
+  environment:
       {{ if isTrue .Env.DEV_MODE }}
       ALLOWED_DOMAINS: ""
       {{else}}
@@ -449,6 +478,7 @@ services:
       - bbb-net
     deploy:
       mode: global
+      endpoint_mode: dnsrr
 {{end}}
 
 {{ if isTrue .Env.ENABLE_COTURN }}
@@ -474,8 +504,11 @@ services:
     user: root
     networks:
       - bbb-net
+    ports:
+      - mode: host    
     deploy:
       mode: global
+      endpoint_mode: dnsrr
 {{end}}
 
 
@@ -501,9 +534,13 @@ services:
     networks:
       - bbb-net
     ports:
-      - 5000:80
+      - target: 80
+        published: 5000
+        mode: host
     deploy:
       mode: global
+      endpoint_mode: dnsrr
+
   postgres:
     image: postgres:12-alpine
     restart: unless-stopped
@@ -522,6 +559,7 @@ services:
       - bbb-net
     deploy:
       mode: global
+      endpoint_mode: dnsrr
 {{end}}
 
 {{ if isTrue .Env.ENABLE_PROMETHEUS_EXPORTER }}
@@ -542,6 +580,7 @@ services:
     {{end}}
     deploy:
       mode: global
+      endpoint_mode: dnsrr
 {{end}}
 
 
@@ -557,8 +596,10 @@ volumes:
 
 networks:
   bbb-net:
-    driver: overlay
-    attachable: true
-    ipam:
-      config:
-        - subnet: "10.7.7.0/24"
+    name: bbb-macvlan
+    external: true
+    #driver: overlay
+    #attachable: true
+    #ipam:
+    #  config:
+    #    - subnet: "10.7.7.0/24"      

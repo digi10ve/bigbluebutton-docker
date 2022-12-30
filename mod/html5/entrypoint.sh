@@ -4,7 +4,7 @@ set -e
 cd /app
 export MONGO_OPLOG_URL=mongodb://mongodb/local
 export MONGO_URL=mongodb://mongodb/meteor
-export ROOT_URL=http://127.0.0.1/html5client
+export ROOT_URL=http://10.7.7.1/html5client
 export NODE_ENV=production
 export SERVER_WEBSOCKET_COMPRESSION=0
 export BIND_IP=0.0.0.0
