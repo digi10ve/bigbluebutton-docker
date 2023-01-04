@@ -229,3 +229,6 @@ echo "  $ docker-compose up -d"
 sed -i '23 c\
     "mediasoup": "3.10.5",' ${HOME}/bbb-docker/mod/webrtc-sfu/bbb-webrtc-sfu/package.json
 rm ${HOME}/bbb-docker/mod/webrtc-sfu/bbb-webrtc-sfu/package-lock.json
+
+# make postgres directory for swarm
+mkdir postgres-data/
