@@ -174,7 +174,9 @@ services:
     networks:
       - bbb-net
     ports:
-      - mode: host
+      - target: 80
+        published: 8080
+        mode: host
     #extra_hosts:
     #  - "host.docker.internal:10.7.7.1"
     #  - "bbb-web:10.7.7.2"
@@ -293,11 +295,11 @@ services:
       - redis
       - freeswitch
     environment:
-      CLIENT_HOST: 10.7.7.1
+      CLIENT_HOST: ${INTERNAL_IPv4}
       REDIS_HOST: redis
       FREESWITCH_IP: freeswitch
       FREESWITCH_SIP_IP: ${EXTERNAL_IPv4}
-      ESL_IP: 10.7.7.1
+      ESL_IP: fsesl-akka
       ESL_PASSWORD: ${FSESL_PASSWORD:-ClueCon}
       # TODO: add mediasoup IPv6
       # TODO: can listen to 0.0.0.0 for nat support? https://github.com/versatica/mediasoup/issues/487
