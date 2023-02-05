@@ -108,7 +108,20 @@ if [ ! "$ip_correct" == "y" ]
 then
     EXTERNAL_IPv4=""
     while [[ ! $EXTERNAL_IPv4 =~ ^[1-9][0-9]{0,2}\.[0-9]{0,3}\.[0-9]{0,3}\.[1-9][0-9]{0,2}$ ]]; do
-        read -p "Please enter correct IPv4 address: " EXTERNAL_IPv4
+        read -p "Please enter correct external IPv4 address: " EXTERNAL_IPv4
+    done
+fi
+
+nat_correct=""
+while [[ ! $nat_correct =~ ^(y|n)$ ]]; do
+    read -p "Is your server behind a Firewall/NAT? (y/n): " nat_correct
+done
+
+if [ "$nat_correct" == "y" ]
+then
+    INTERNAL_IPv4=""
+    while [[ ! $INTERNAL_IPv4 =~ ^[1-9][0-9]{0,2}\.[0-9]{0,3}\.[0-9]{0,3}\.[1-9][0-9]{0,2}$ ]]; do
+        read -p "Please enter correct internal IPv4 address: " INTERNAL_IPv4
     done
 fi
 
@@ -133,6 +146,8 @@ fi
 # write settings
 cp sample.env .env
 sed -i "s/EXTERNAL_IPv4=.*/EXTERNAL_IPv4=$EXTERNAL_IPv4/" .env
+sed -i "s/ANNOUNCED_IPv4=.*/ANNOUNCED_IPv4=$EXTERNAL_IPv4/" .env
+sed -i "s/INTERNAL_IPv4=.*/INTERNAL_IPv4=$INTERNAL_IPv4/" .env
 sed -i "s/EXTERNAL_IPv6=.*/EXTERNAL_IPv6=$EXTERNAL_IPv6/" .env
 sed -i "s/DOMAIN=.*/DOMAIN=$DOMAIN/" .env
 
@@ -209,3 +224,8 @@ echo "  $ ./scripts/generate-compose"
 echo ""
 echo "to start bigbluebutton run"
 echo "  $ docker-compose up -d"
+
+# change mediasoup version to 3.10.5 & remove package-copy.json
+sed -i '23 c\
+    "mediasoup": "3.10.5",' ${HOME}/bbb-docker/mod/webrtc-sfu/bbb-webrtc-sfu/package.json
+rm ${HOME}/bbb-docker/mod/webrtc-sfu/bbb-webrtc-sfu/package-lock.json

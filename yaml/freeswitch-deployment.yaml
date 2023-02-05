@@ -1,0 +1,122 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: freeswitch
+  labels:
+    app: freeswitch
+    test: 'true'
+    environment: testing
+data:
+  freeswitch.log.level: info
+  freeswitch.log.color: 'true'
+  freeswitch.rtp.port-range: '16384-32768'
+  freeswitch.disable-nat-detection: 'false'
+  freeswitch.tls.enable: 'false'
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose-resolved.yaml
+    kompose.version: 1.26.1 (a9d05d509)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: freeswitch
+  name: freeswitch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: freeswitch
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose-resolved.yaml
+        kompose.version: 1.26.1 (a9d05d509)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: freeswitch
+        app: freeswitch
+    spec:
+      hostNetwork: true
+      containers:
+        - env:
+            - name: ANNOUNCED_IPv4
+              value: 34.171.121.78
+            - name: DISABLE_SOUND_ALONE
+              value: "false"
+            - name: DISABLE_SOUND_MUTED
+              value: "false"
+            - name: DOMAIN
+              value: bbbselfdev.hopto.org
+            - name: ESL_PASSWORD
+              value: 0GpeMD8ArEyUTOWr8I6gjuuHbhif1upnxGmnCvRs
+            - name: EXTERNAL_IPv4
+              value: 34.171.121.78
+            - name: EXTERNAL_IPv6
+              value: ::1
+            - name: SIP_IP_ALLOWLIST
+            - name: SOUNDS_LANGUAGE
+              value: en-us-callie
+            - name: FREESWITCH_LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: freeswitch
+                  key: freeswitch.log.level
+            - name: FREESWITCH_LOG_COLOR
+              valueFrom:
+                configMapKeyRef:
+                  name: freeswitch
+                  key: freeswitch.log.color
+            - name: FREESWITCH_RTP_PORT_RANGE
+              valueFrom:
+                configMapKeyRef:
+                  name: freeswitch
+                  key: freeswitch.rtp.port-range
+            - name: FREESWITCH_DISABLE_NAT_DETECTION
+              valueFrom:
+                configMapKeyRef:
+                  name: freeswitch
+                  key: freeswitch.disable-nat-detection
+            - name: FREESWITCH_TLS_ENABLE
+              valueFrom:
+                configMapKeyRef:
+                  name: freeswitch
+                  key: freeswitch.tls.enable
+          image: asia-east1-docker.pkg.dev/mplus-video-conference/mplus/bbb-k8s-freeswitch:v2.5.0
+          ports:
+          - name: fsesl
+            containerPort: 8021
+          name: bbb-freeswitch
+          resources: {}
+          securityContext:
+            capabilities:
+              add:
+                - IPC_LOCK
+                - NET_ADMIN
+                - NET_RAW
+                - NET_BROADCAST
+                - SYS_NICE
+                - SYS_RESOURCE
+          volumeMounts:
+            - mountPath: /etc/freeswitch/sip_profiles/external
+              name: freeswitch-claim0
+            - mountPath: /etc/freeswitch/dialplan/public_docker
+              name: freeswitch-claim1
+            - mountPath: /var/freeswitch/meetings
+              name: vol-freeswitch
+      restartPolicy: Always
+      volumes:
+        - name: freeswitch-claim0
+          persistentVolumeClaim:
+            claimName: freeswitch-claim0
+        - name: freeswitch-claim1
+          persistentVolumeClaim:
+            claimName: freeswitch-claim1
+        - name: vol-freeswitch
+          persistentVolumeClaim:
+            claimName: vol-freeswitch
+status: {}

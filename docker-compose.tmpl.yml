@@ -119,6 +119,7 @@ services:
     environment:
       DOMAIN: ${DOMAIN}
       EXTERNAL_IPv4: ${EXTERNAL_IPv4}
+      ANNOUNCED_IPv4: ${ANNOUNCED_IPv4}
       EXTERNAL_IPv6: ${EXTERNAL_IPv6:-::1}
       SIP_IP_ALLOWLIST: ${SIP_IP_ALLOWLIST:-}
       DISABLE_SOUND_MUTED: ${DISABLE_SOUND_MUTED:-false}
@@ -156,7 +157,7 @@ services:
 
   etherpad:
     build: mod/etherpad
-    image: alangecker/bbb-docker-etherpad:1.8.18-3
+    image: alangecker/bbb-docker-etherpad:1.8.18-2
     restart: unless-stopped
     depends_on:
       - redis
@@ -193,7 +194,7 @@ services:
 
   mongodb:
     container_name: bbb-mongodb
-    image: mongo:4.4
+    image: mongo:5.0
     restart: unless-stopped
     volumes:
       - ./mod/mongo/mongod.conf:/etc/mongod.conf
@@ -210,7 +211,7 @@ services:
 
   #  TODO: remove as soon as not required anymore by webrtc-sfu
   kurento:
-    image: kurento/kurento-media-server:6.18
+    image: kurento/kurento-media-server:6.17
     restart: unless-stopped
     network_mode: host
     volumes:
@@ -236,11 +237,11 @@ services:
       # TODO: add mediasoup IPv6
       # TODO: can listen to 0.0.0.0 for nat support? https://github.com/versatica/mediasoup/issues/487
     {{ if .Env.EXTERNAL_IPv6 }}
-      MS_WEBRTC_LISTEN_IPS: '[{"ip":"{{ .Env.EXTERNAL_IPv6 }}", "announcedIp":"{{ .Env.EXTERNAL_IPv6 }}"}, {"ip":"${EXTERNAL_IPv4}", "announcedIp":"${EXTERNAL_IPv4}"}]'
+      MS_WEBRTC_LISTEN_IPS: '[{"ip":"{{ .Env.EXTERNAL_IPv6 }}", "announcedIp":"{{ .Env.EXTERNAL_IPv6 }}"}, {"ip":"${INTERNAL_IPv4}", "announcedIp":"${ANNOUNCED_IPv4}"}]'
     {{else}}
-      MS_WEBRTC_LISTEN_IPS: '[{"ip":"${EXTERNAL_IPv4}", "announcedIp":"${EXTERNAL_IPv4}"}]'
+      MS_WEBRTC_LISTEN_IPS: '[{"ip":"${INTERNAL_IPv4}", "announcedIp":"${ANNOUNCED_IPv4}"}]'
     {{end}}
-      MS_RTP_LISTEN_IP: '{"ip":"0.0.0.0", "announcedIp":"${EXTERNAL_IPv4}"}'
+      MS_RTP_LISTEN_IP: '{"ip":"0.0.0.0", "announcedIp":"${ANNOUNCED_IPv4}"}'
     volumes:
       - vol-mediasoup:/var/mediasoup
     tmpfs:
@@ -288,8 +289,6 @@ services:
   jodconverter:
     build: mod/jodconverter
     image: alangecker/bbb-docker-jodconverter:latest
-    security_opt:
-      - 'no-new-privileges:true'
     restart: unless-stopped
     tmpfs:
       - /tmp
@@ -389,7 +388,7 @@ services:
 {{ if isTrue .Env.ENABLE_COTURN }}
   # coturn
   coturn:
-    image: coturn/coturn:4.6-alpine
+    image: coturn/coturn:4.5-alpine
     restart: unless-stopped
     command:
       - "--external-ip=${EXTERNAL_IPv4}/${EXTERNAL_IPv4}"

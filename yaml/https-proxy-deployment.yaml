@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose-resolved.yaml
+    kompose.version: 1.26.1 (a9d05d509)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: https-proxy
+  name: https-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: https-proxy
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose-resolved.yaml
+        kompose.version: 1.26.1 (a9d05d509)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: https-proxy
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+        - env:
+            - name: ALLOWED_DOMAINS
+              value: bbbselfdev.hopto.org
+          image: valian/docker-nginx-auto-ssl
+          #ports:
+          #- containerPort: 80
+          name: https-proxy
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 0
+          resources: {}
+          volumeMounts:
+            - mountPath: /etc/resty-auto-ssl
+              name: ssl-data
+            - mountPath: /etc/nginx/conf.d/bbb-docker.conf
+              name: https-proxy-claim1
+      restartPolicy: Always
+      volumes:
+        - name: ssl-data
+          persistentVolumeClaim:
+            claimName: ssl-data
+        - name: https-proxy-claim1
+          persistentVolumeClaim:
+            claimName: https-proxy-claim1
+status: {}

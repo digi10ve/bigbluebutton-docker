@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose-resolved.yaml
+    kompose.version: 1.26.1 (a9d05d509)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: webrtc-sfu
+  name: webrtc-sfu
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: webrtc-sfu
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose-resolved.yaml
+        kompose.version: 1.26.1 (a9d05d509)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: webrtc-sfu
+        app: webrtc-sfu
+    spec:
+      hostNetwork: true
+      containers:
+        - env:
+            - name: CLIENT_HOST
+              value: 10.128.0.32
+            - name: ESL_IP
+              value: 10.128.0.32
+            - name: ESL_PASSWORD
+              value: 0GpeMD8ArEyUTOWr8I6gjuuHbhif1upnxGmnCvRs
+            - name: FREESWITCH_IP
+              value: 10.128.0.32
+            - name: FREESWITCH_SIP_IP
+              value: 34.171.121.78
+            - name: MS_RTP_LISTEN_IP
+              value: '{"ip":"0.0.0.0", "announcedIp":"34.171.121.78"}'
+            - name: MS_WEBRTC_LISTEN_IPS
+              value: '[{"ip":"10.128.0.32", "announcedIp":"34.171.121.78"}]'
+            - name: REDIS_HOST
+              value: 10.120.0.5
+          image: asia-east1-docker.pkg.dev/mplus-video-conference/mplus/bbb-k8s-webrtc-sfu:v2.8.5
+          ports:
+          - containerPort: 5066
+          name: webrtc-sfu
+          resources: {}
+          volumeMounts:
+            - mountPath: /var/mediasoup
+              name: vol-mediasoup
+            - mountPath: /var/log/bbb-webrtc-sfu
+              name: webrtc-sfu-tmpfs0
+      restartPolicy: Always
+      volumes:
+        - name: vol-mediasoup
+          persistentVolumeClaim:
+            claimName: vol-mediasoup
+        - emptyDir:
+            medium: Memory
+          name: webrtc-sfu-tmpfs0
+status: {}
