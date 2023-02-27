@@ -37,6 +37,12 @@ Version: 2.5.8 | [Changelog](CHANGELOG.md) | [Issues](https://github.com/bigblue
 3. Run setup:
    ```bash
    $ ./scripts/setup
+   
+   # Create a Swarm network
+   $ docker swarm init --advertise-addr INTERNAL
+   
+   # Make a local private registry
+   $ docker run -d -p 5000:5000 --name registry registry:2
    ```
 4. (optional) Make additional configuration adjustments
    ```bash
@@ -50,8 +56,13 @@ Version: 2.5.8 | [Changelog](CHANGELOG.md) | [Issues](https://github.com/bigblue
    ```
 6. Deploy containers:
    ```bash
+   # Create Docker macvlan network
+   $ docker network create --config-only -d macvlan --subnet=10.7.7.0/24 --gateway=10.7.7.1 -o parent=ens4 macvlan-conf
+   $ docker network create -d macvlan --scope swarm --config-from macvlan-conf bbb-macvlan
+
    # Deploy containers with a method to get variables in .env
    $ docker stack deploy -c <(docker-compose config) bbb-stack
+   
    ``` 
 7. (currently not working)
    If you use greenlight, you can create an admin account with:
